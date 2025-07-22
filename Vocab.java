@@ -2,12 +2,19 @@ public abstract class Vocab {
     public static void main(String[] args) throws SpellingException, ConjugationException {
         Verb verb = new Verb("たべる", "eat", "ate", false, null);
 
-        for (int i = 0; i <= 7; i++) {
+        for (int i = 0; i < 8; i++) {
             boolean isPositive = (i & 1) != 0;
             boolean isFuture = (i & 2) != 0;
             boolean isProgressive = (i & 4) != 0;
 
             System.out.println(verb.conjugate(!isPositive, !isFuture, isProgressive));
+        }
+
+        Adjective adj = new Adjective("たかい", "tall");
+        for (int i = 0; i < 4; i++) {
+            boolean isPositive = (i & 1) != 0;
+            boolean isFuture = (i & 2) != 0;
+            System.out.println(adj.conjugate(isPositive, isFuture) + "です");
         }
     }
 
@@ -47,6 +54,7 @@ class Verb extends Vocab {
 
         // Precalculate conjugations
         String romanji = Conjugate.toRomanji(hiragana);
+        Conjugate.assertVerb(romanji);
         stem = Conjugate.toHiragana(Conjugate.getVerbStem(romanji, iruEruOverride));
         teForm = Conjugate.toHiragana(Conjugate.getVerbTeForm(romanji, iruEruOverride));
     }
@@ -58,5 +66,19 @@ class Verb extends Vocab {
         }
 
         return s + "ません" + (isFuture ? "" : "でした");
+    }
+}
+
+class Adjective extends Vocab {
+    private final String stem;
+
+    public Adjective(String hiragana, String english) throws ConjugationException {
+        super(hiragana, english);
+        Conjugate.assertAdj(hiragana);
+        stem = hiragana.substring(0, hiragana.length() - 1);
+    }
+    
+    public String conjugate(boolean isPositive, boolean isFuture) {
+        return stem + (isPositive ? (isFuture ? "い" : "かった") : (isFuture ? "くない" : "くなかった"));
     }
 }

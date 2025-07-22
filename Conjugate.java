@@ -107,9 +107,9 @@ public class Conjugate {
          */
     }
 
-    private static void assertVerb(String verb) throws ConjugationException {
-        if (verb.charAt(verb.length() - 1) != 'u') {
-            throw new ConjugationException("Verb '" + verb + "' does not end in 'u'");
+    public static void assertVerb(String romanji) throws ConjugationException {
+        if (romanji.charAt(romanji.length() - 1) != 'u') {
+            throw new ConjugationException("Verb '" + romanji + "' does not end in 'u'");
         }
     }
 
@@ -130,15 +130,13 @@ public class Conjugate {
         {"gu", "ide"},
         {"u", TTE}
     };
-    public static String getVerbTeForm(String verb, boolean iruEruOverride) throws ConjugationException {
-        assertVerb(verb);
-
+    public static String getVerbTeForm(String romanji, boolean iruEruOverride) throws ConjugationException {
         String teStem = null;
-        if (!iruEruOverride && (verb.endsWith(IRU) || verb.endsWith(ERU))) {
-            teStem = verb.substring(0, verb.length() - 2);
-        } else if (verb.equals("iku")) {
+        if (!iruEruOverride && (romanji.endsWith(IRU) || romanji.endsWith(ERU))) {
+            teStem = romanji.substring(0, romanji.length() - 2);
+        } else if (romanji.equals("iku")) {
             teStem = "it"; // becomes itte
-        } else if (verb.equals("kuru")) {
+        } else if (romanji.equals("kuru")) {
             teStem = "ki";
         }
 
@@ -147,12 +145,12 @@ public class Conjugate {
         }
 
         for (String[] form : TEFORMS) {
-            if (verb.endsWith(form[0])) {
-                return verb.substring(0, verb.length() - form[0].length()) + form[1];
+            if (romanji.endsWith(form[0])) {
+                return romanji.substring(0, romanji.length() - form[0].length()) + form[1];
             }
         }
 
-        throw new ConjugationException("Wrong verb ending with verb '" + verb + "'");
+        throw new ConjugationException("Wrong verb ending with verb '" + romanji + "'");
     }
 
     private static String putVerbStemException(String romanji, String end, String stemEnd) {
@@ -168,14 +166,13 @@ public class Conjugate {
         {"su", "shi"}
     };
 
-    public static String getVerbStem(String romanji, boolean iruEruOverride) throws ConjugationException {
-        assertVerb(romanji);
-
+    public static String getVerbStem(String romanji, boolean iruEruOverride) {
         // Kuru exception
         if (romanji.equals("kuru")) {
             return "ki";
         }
 
+        // Handle iru/eru endings
         if (!iruEruOverride && (romanji.endsWith(IRU) || romanji.endsWith(ERU))) {
             return romanji.substring(0, romanji.length() - 2);
         }
@@ -193,7 +190,11 @@ public class Conjugate {
         return romanji.substring(0, romanji.length() - 1) + 'i';
     }
 
-
+    public static void assertAdj(String hiragana) throws ConjugationException {
+        if (hiragana.charAt(hiragana.length() - 1) != 'い') {
+            throw new ConjugationException("Adjective " + hiragana + " does not end in 'い'");
+        }
+    }
 
     private static final int H_BASE = 12353;
     private static final String VOWELS = "aiueo";
