@@ -25,6 +25,11 @@ public abstract class Vocab {
         this.hiragana = hiragana;
         this.english = english;
     }
+
+    @Override
+    public String toString() {
+        return hiragana;
+    }
 }
 
 class Noun extends Vocab {
@@ -80,5 +85,9 @@ class Adjective extends Vocab {
     
     public String conjugate(boolean isPositive, boolean isFuture) {
         return stem + (isPositive ? (isFuture ? "い" : "かった") : (isFuture ? "くない" : "くなかった"));
+    }
+
+    public static Adjective getInfinitive(String inf) {
+        
     }
 }

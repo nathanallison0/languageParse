@@ -1,9 +1,19 @@
+
+import java.util.List;
 import java.util.Scanner;
+
 
 public class Translate {
     public static void main(String[] args) throws SpellingException, ConjugationException {
         Scanner input = new Scanner(System.in);
-        _Dictionary.populate();
+        Dictionary d = new Dictionary(List.of(
+            new Noun("わたし", "", true),
+            new Noun("ひと", "", true),
+            new Noun("こども", "", true),
+            new Adjective("たかい", ""),
+            new Adjective("かっこよい", ""),
+            new Adjective("よい", "")
+        ));
 
         while (true) {
             System.out.print("Enter a thing: ");
@@ -18,7 +28,7 @@ public class Translate {
 
     private static String phraseToEnglish(String hiragana) {
         // First, check to see if phrase is all one translatable word
-        Vocab word = _Dictionary.getJapaneseWord(hiragana);
+        Vocab word = Dictionary.getJapaneseWord(hiragana);
         if (word != null) {
             return word.english;
         }
@@ -54,21 +64,29 @@ public class Translate {
 
         // Check for statements like "です"
         String[] statement = findStatementInPhrase(hiragana);
+        Adjective adj = null;
 
         if (statement != null) {
             // Cut off statement
             String toTranslate = hiragana.substring(0, hiragana.length() - statement[0].length());
+
+            // If statement is "です", check for an adjective before it
+            if (statement == STATEMENTS[0]) {
+                adj = Adjective.getInfinitive(toTranslate);
+            }
 
             // Return statement phrase along with translation of what the statement
             // refers to
             // ex. "がっこうです" -> {"school", "is"} -> "is school"
             return statement[1] + " " + phraseToEnglish(toTranslate);
         }
+
+        // Check for adjective at end of phrase
         
         return null;
     }
 
-    private static final String[][] statements = {
+    private static final String[][] STATEMENTS = {
         {"です", "is"},
         {"じゃありません", "is not"},
         {"じゃありませんでした", "was not"},
@@ -76,7 +94,7 @@ public class Translate {
     };
 
     private static String[] findStatementInPhrase(String hiragana) {
-        for (String[] set : statements) {
+        for (String[] set : STATEMENTS) {
             if (hiragana.endsWith(set[0])) {
                 return set;
             }
