@@ -86,8 +86,4 @@ class Adjective extends Vocab {
     public String conjugate(boolean isPositive, boolean isFuture) {
         return stem + (isPositive ? (isFuture ? "い" : "かった") : (isFuture ? "くない" : "くなかった"));
     }
-
-    public static Adjective getInfinitive(String inf) {
-        
-    }
 }
