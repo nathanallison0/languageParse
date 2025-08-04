@@ -19,3 +19,6 @@ The program contains a set of japanese nouns, verbs, and adjectives, along with 
 ## The Interactive Study Tool
 
 The study tool will randomly generate sentences and prompt the user for its translation, offering a more in-depth study method than repeatedly shoving flashcards into your brain. The senteces given will be scalable by complexity, ex. from "he ran" to "after leaving home at 8:00 am, he ran five miles to a nearby park, feeling refreshed afterward". The sentences are not garunteed to make sense, but ridiculous prompts make for a more memorable experience.
+
+## How To Use
+This project is currently under development and not in working order.
