@@ -45,16 +45,21 @@ class Noun extends Vocab {
 }
 
 class Verb extends Vocab {
-    private final String englishPast;
-    private final String[] particleRules;
+    protected final String englishPresent;
+    protected final String englishPast;
+    protected final String englishProgressive;
+    protected final String[] particleRules;
 
     protected final String stem;
 
     protected final String teForm;
 
-    public Verb(String hiragana, String englishPresent, String englishPast, boolean iruEruOverride, String[] particleRules) throws SpellingException, ConjugationException {
-        super(hiragana, englishPresent);
+    public Verb(String hiragana, String englishInf, String englishPresent, String englishPast, String englishProgressive, 
+                boolean iruEruOverride, String[] particleRules) throws SpellingException, ConjugationException {
+        super(hiragana, englishInf);
+        this.englishPresent = englishPresent;
         this.englishPast = englishPast;
+        this.englishProgressive = englishProgressive;
         this.particleRules = particleRules;
 
         // Precalculate conjugations

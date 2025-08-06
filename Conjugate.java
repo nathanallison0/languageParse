@@ -62,14 +62,16 @@ class ConjugationException extends Exception {
 
 public class Conjugate {
     public static void main(String[] args) throws SpellingException, ConjugationException {
+        System.out.println(toHiragana(toRomanji("みんな")));
+
         //String h = "あいうえおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもやゆよらりるれろわをん";
 
-        String[] verbs = {"たべる", "いく", "はこぶ", "まつ", "べんきょうする", "もらう", "はなす"};
+        /* String[] verbs = {"たべる", "いく", "はこぶ", "まつ", "べんきょうする", "もらう", "はなす"};
         for (String verb : verbs) {
             String r = toRomanji(verb);
             String stem = getVerbTeForm(r, false);
             System.out.println(toHiragana(stem) + "います");
-        }
+        } */
         /* 
         String h = "きゃにゃしゅ";
         String r = toRomanji(h);
@@ -160,7 +162,7 @@ public class Conjugate {
         return null;
     }
 
-    private static final String[][] STEMEXCEPTIONS = {
+    private static final String[][] STEM_EXCEPTIONS = {
         {"suru", "shi"},
         {"tsu", "chi"},
         {"su", "shi"}
@@ -179,7 +181,7 @@ public class Conjugate {
 
         // All stems that aren't just changing 'u' to 'i'
         String stem;
-        for (String[] exc : STEMEXCEPTIONS) {
+        for (String[] exc : STEM_EXCEPTIONS) {
             stem = putVerbStemException(romanji, exc[0], exc[1]);
             if (stem != null) {
                 return stem;
@@ -229,7 +231,7 @@ public class Conjugate {
                 // Check for combinations
                 // Set the romanji so that the small character becomes large
                 // ex. kya becomes kiya
-                // Then, next iteration, make the second char small
+                // Then, next iteration, make the second char the smaller version
                 boolean isShort3 = (hasThird && second == 'y');
                 boolean isShort4 = (!isShort3 && i < romanji.length() - 3 && romanji.substring(i, i + 3).equals("shy"));
                 if (isShort3 || isShort4) {
@@ -239,8 +241,8 @@ public class Conjugate {
                     isSmall = true;
                     continue;
 
-                } else if (first == second) {
-                    // Check for hiraganaeating character, meaning 'っ'
+                } else if (first == second && first != 'n') {
+                    // Check for repeating character, meaning 'っ'
                     charLen = 1;
                     hiragana += 'っ';
                     continue;
@@ -272,6 +274,7 @@ public class Conjugate {
                     case 'c':
                         // ただちぢっつづてでとど
                         if (hasThird && vowelIndex == -1) {
+                            // Chi and tsu
                             charLen = 3;
                             String three = romanji.substring(i, i + 3);
                             if (three.equals("chi")) {
@@ -280,6 +283,7 @@ public class Conjugate {
                                 hiragana += 'つ';
                             }
                         } else {
+                            // The others
                             char c = (char) (H_BASE + H_SECTIONS[3] + ((vowelIndex * 2) + (first == 't' ? 0 : 1)));
                             if (c >= 'っ') {
                                 c++;
@@ -312,6 +316,7 @@ public class Conjugate {
 
                     case 'y':
                         // ゃやゅゆょよ
+                        // Can't support i or e
                         if (vowelIndex % 2 == 1) {
                             throw spellEx;
                         }

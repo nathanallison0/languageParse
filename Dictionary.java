@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Dictionary {
-    public static void main(String[] args) throws ConjugationException {
+    public static void main(String[] args) throws ConjugationException, SpellingException {
         Dictionary d = new Dictionary(List.of(
             new Noun("わたし", "I", true),
             new Noun("ひと", "person", true),
@@ -14,7 +14,10 @@ public class Dictionary {
             new Noun("ことば", "word", false),
             new Adjective("たかい", "high"),
             new Adjective("かっこよい", "cool"),
-            new Adjective("よい", "good")
+            new Adjective("よい", "good"),
+            new Verb("はなす", "speak", "speaks", "spoke", "speaking", false, null),
+            new Verb("たべる", "eat", "eats", "ate", "eating", false, null),
+            new Verb("かえる", "return", "returns", "returned", "returning", true, null)
         ));
 
         Scanner input = new Scanner(System.in);
@@ -24,8 +27,6 @@ public class Dictionary {
             String hiragana = input.nextLine();
             System.out.println(d.phraseToEnglish(hiragana));
         }
-        // System.out.println(Arrays.toString(d.wordListsByClass));
-        // System.out.println(d.findFollowingPhrase("わたしはかっこよい", Adjective.class));
     }
 
     private final Class<?>[] wordClasses = {Noun.class, Verb.class, Adjective.class};
@@ -91,13 +92,19 @@ public class Dictionary {
             }
         }
 
+        // Check for verbs
+        Conjugation<Verb> verbConj = findVerbFollowingPhrase(hiragana);
+        if (verbConj != null) {
+            return verbConj.toEnglish();
+        }
+
         // Check for statements like "です"
         String[] statement = getEnd(hiragana, STATEMENT_ENDS);
         Conjugation<Adjective> adjConj = null;
 
         if (statement != null) {
             // Cut off statement
-            String toTranslate = hiragana.substring(0, hiragana.length() - statement[0].length());
+            String toTranslate = removeEnd(hiragana, statement);
 
             // If statement is "です", check for an adjective before it
             if (statement[0] == STATEMENT_ENDS[1]) {
@@ -193,7 +200,7 @@ public class Dictionary {
     /**
      * @param c The class of word to find
      * @param wordLength Word length of the sub-list
-     * @return The corresponding sub-list if it exists, otherwise a new one put in its place
+     * @return The corresponding sub-list if it exists, otherwise the new one put in its place
      */
     private ArrayList<Vocab> getClassSubList(Class<? extends Vocab> c, int wordLength) {
         ArrayList<ArrayList<Vocab>> classList = getClassList(c);
@@ -217,12 +224,52 @@ public class Dictionary {
 
         if (endSet != null) {
             // Get infitive of adjective and corresponding object
-            String inf = hiraganaPhrase.substring(0, hiraganaPhrase.length() - endSet[0].length()) + "い";
+            String inf = removeEnd(hiraganaPhrase, endSet) + "い";
             Vocab word = findFollowingPhrase(inf, Adjective.class);
 
             if (word instanceof Adjective adj) { // effectively asserts non-null
                 return new Conjugation<>(adj, endSet[1]);
             }
+        }
+        return null;
+    }
+
+    private Conjugation<Verb> findVerbFollowingPhrase(String hiraganaPhrase) {
+        String[] endSet = getEnd(hiraganaPhrase, VERB_ENDS);
+        if (endSet == null) {
+            return null;
+        }
+        String stem = removeEnd(hiraganaPhrase, endSet);
+
+        boolean isProgressive = stem.endsWith("てい") || stem.endsWith("でい");
+        // For non-progressives, check an extra word length for non-iru and eru exceptions
+        // ex. the stem of たべる would be たべ, so words of length 3 would need to be checked
+        int lastLengthCheck = hiraganaPhrase.length() + 1;
+        if (isProgressive) {
+            // Extra length check not necessary for progressives
+            lastLengthCheck--;
+            // Change from ending with "てい" to "て" for checking te-forms
+            stem = stem.substring(0, stem.length() - 1);
+        }
+
+        // Check each sub-list until we exceed the maximum possible length of verb,
+        // returning the longest match
+        ArrayList<ArrayList<Vocab>> verbList = getClassList(Verb.class);
+        int length = 0;
+        Verb found = null;
+        for (int i = 0; i < verbList.size() && length <= lastLengthCheck; i++) {
+            ArrayList<Vocab> subList = verbList.get(i);
+            length = subList.get(0).hiragana.length();
+            for (Vocab word : subList) {
+                Verb v = (Verb) word;
+                if ((isProgressive && stem.endsWith(v.teForm)) ||
+                    (!isProgressive && stem.endsWith(v.stem))) {
+                        found = v;
+                    }
+            }
+        }
+        if (found != null) {
+            return new Conjugation<>(found, endSet[1], isProgressive);
         }
         return null;
     }
@@ -246,8 +293,15 @@ public class Dictionary {
         return null;
     }
 
+    private static String removeEnd(String hiragana, String[] ends) {
+        return hiragana.substring(0, hiragana.length() - ends[0].length());
+    }
+
     protected static final String[] ENG_ENDS = {
-        "is not", "is", "was not", "was"
+        "is not",
+        "is",
+        "was not",
+        "was"
     };
 
     private static final String[] STATEMENT_ENDS = {
@@ -263,34 +317,81 @@ public class Dictionary {
         "くなかった",
         "かった"
     };
+
+    private static final String[] VERB_ENDS = {
+        "ません",
+        "ます",
+        "ませんでした",
+        "ました"
+    };
 }
 
 class Conjugation<T extends Vocab> {
     protected final T word;
-    protected final boolean isPositive;
-    protected final boolean isPresent;
+    protected boolean isPositive;
+    protected boolean isPresent;
+    protected final boolean isProgressive; // only applies to verbs
+
+    public Conjugation(T word, boolean isPositive, boolean isPresent, boolean isProgressive) {
+        this.word = word;
+        this.isPositive = isPositive;
+        this.isPresent = isPresent;
+        this.isProgressive = isProgressive;
+    }
 
     public Conjugation(T word, boolean isPositive, boolean isPresent) {
         this.word = word;
         this.isPositive = isPositive;
         this.isPresent = isPresent;
+        this.isProgressive = false;
     }
 
-    /**
-     * @param engStatement An english statement, ex. "was", obtained from Dictionary.getEnd()
-     */
-    public Conjugation(T word, String engStatement) {
-        this.word = word;
+    private void statementInit(String engStatement) {
         this.isPositive = (engStatement == Dictionary.ENG_ENDS[1] || engStatement == Dictionary.ENG_ENDS[3]);
         this.isPresent =  (engStatement == Dictionary.ENG_ENDS[0] || engStatement == Dictionary.ENG_ENDS[1]);
     }
 
+    public Conjugation(T word, String engStatement) {
+        this.word = word;
+        statementInit(engStatement);
+        this.isProgressive = false;
+    }
+
+    public Conjugation(T word, String engStatement, boolean isProgressive) {
+        this.word = word;
+        statementInit(engStatement);
+        this.isProgressive = isProgressive;
+    }
+
     @Override
     public String toString() {
-        return "(" + word + ": " + (isPositive ? "positive" : "negative") + ", " + (isPresent ? "present" : "past") + ")";
+        String rep = "(" + word + ": ";
+        rep += (isPositive ? "positive" : "negative") + ", ";
+        rep += (isPresent ? "present" : "past") + ", ";
+        if (word instanceof Verb) {
+            rep += (isProgressive ? "" : "non-") + "progressive";
+        }
+        return rep + ")";
     }
 
     public String toEnglish() {
+        if (word instanceof Verb v) {
+            if (isProgressive) {
+                return (isPresent ? "is" : "was") + " " + (isPositive ? "" : "not ") + v.englishProgressive;
+            }
+            if (isPresent) {
+                if (isPositive) {
+                    return v.englishPresent;
+                }
+                return "does not " + v.english;
+            }
+
+            if (isPositive) {
+                return v.englishPast;
+            }
+
+            return "did not " + v.english;
+        }
         return Dictionary.ENG_ENDS[(isPresent ? 1 : 3) - (isPositive ? 0 : 1)] + " " + word.english;
     }
 }
