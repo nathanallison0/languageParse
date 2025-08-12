@@ -1,6 +1,6 @@
 public abstract class Vocab {
     public static void main(String[] args) throws SpellingException, ConjugationException {
-        Verb verb = new Verb("たべる", "eat", "ate", false, null);
+        Verb verb = new Verb("たべる", "eat", "eats", "ate", "eating", false, null);
 
         for (int i = 0; i < 8; i++) {
             boolean isPositive = (i & 1) != 0;
@@ -48,19 +48,18 @@ class Verb extends Vocab {
     protected final String englishPresent;
     protected final String englishPast;
     protected final String englishProgressive;
-    protected final String[] particleRules;
+    protected final String[] particles;
 
     protected final String stem;
-
     protected final String teForm;
 
     public Verb(String hiragana, String englishInf, String englishPresent, String englishPast, String englishProgressive, 
-                boolean iruEruOverride, String[] particleRules) throws SpellingException, ConjugationException {
+                boolean iruEruOverride, String[] particles) throws SpellingException, ConjugationException {
         super(hiragana, englishInf);
         this.englishPresent = englishPresent;
         this.englishPast = englishPast;
         this.englishProgressive = englishProgressive;
-        this.particleRules = particleRules;
+        this.particles = particles;
 
         // Precalculate conjugations
         String romanji = Conjugate.toRomanji(hiragana);
@@ -76,6 +75,15 @@ class Verb extends Vocab {
         }
 
         return s + "ません" + (isFuture ? "" : "でした");
+    }
+
+    public String getParticleEnglish(char hiraganaParticle) {
+        for (String particle : particles) {
+            if (particle.charAt(0) == hiraganaParticle) {
+                return particle.substring(1);
+            }
+        }
+        return null;
     }
 }
 

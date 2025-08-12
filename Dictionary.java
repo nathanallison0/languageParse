@@ -5,6 +5,11 @@ import java.util.Scanner;
 
 public class Dictionary {
     public static void main(String[] args) throws ConjugationException, SpellingException {
+        String[] particles = {
+            "を",
+            "でat",
+            "とwith"
+        };
         Dictionary d = new Dictionary(List.of(
             new Noun("わたし", "I", true),
             new Noun("ひと", "person", true),
@@ -12,13 +17,17 @@ public class Dictionary {
             new Noun("まち", "town", false),
             new Noun("だいじょうぶ", "okay", false),
             new Noun("ことば", "word", false),
+            new Noun("たべもの", "food", false),
+            new Noun("ともだち", "friend", true),
             new Adjective("たかい", "high"),
             new Adjective("かっこよい", "cool"),
             new Adjective("よい", "good"),
             new Verb("はなす", "speak", "speaks", "spoke", "speaking", false, null),
-            new Verb("たべる", "eat", "eats", "ate", "eating", false, null),
+            new Verb("たべる", "eat", "eats", "ate", "eating", false, particles),
             new Verb("かえる", "return", "returns", "returned", "returning", true, null)
         ));
+
+        System.out.println(d.findFollowingPhrase("わたしはひと", Noun.class));
 
         Scanner input = new Scanner(System.in);
 
@@ -60,7 +69,7 @@ public class Dictionary {
         // First, check to see if phrase is all one translatable noun
         Vocab word = get(hiragana, Noun.class);
         if (word != null) {
-            return word.english;
+            return "the " + word.english;
         }
 
         // Get number of 'ha's
@@ -95,7 +104,32 @@ public class Dictionary {
         // Check for verbs
         Conjugation<Verb> verbConj = findVerbFollowingPhrase(hiragana);
         if (verbConj != null) {
-            return verbConj.toEnglish();
+            // If verb found, translate any particles
+            hiragana = removeEnd(hiragana, verbConj.toHiragana());
+            String allParticlesEng = "";
+            while (hiragana.length() != 0) {
+                // Get the english meaning of this particle
+                String particleEng = verbConj.word.getParticleEnglish(hiragana.charAt(hiragana.length() - 1));
+                if (particleEng == null) {
+                    break;
+                }
+
+                // Get the noun used with the particle
+                Noun noun = (Noun) findFollowingPhrase(hiragana.substring(0, hiragana.length() - 1), Noun.class);
+                if (noun == null) {
+                    break;
+                }
+
+                // Save translation
+                if (particleEng.length() != 0) {
+                    allParticlesEng += " " + particleEng;
+                }
+                allParticlesEng += " " + noun.english;
+
+                // Remove particle and noun so the next can be translated
+                hiragana = hiragana.substring(0, hiragana.length() - noun.hiragana.length() - 1);
+            }
+            return verbConj.toEnglish() + allParticlesEng;
         }
 
         // Check for statements like "です"
@@ -104,7 +138,7 @@ public class Dictionary {
 
         if (statement != null) {
             // Cut off statement
-            String toTranslate = removeEnd(hiragana, statement);
+            String toTranslate = removeEnd(hiragana, statement[0]);
 
             // If statement is "です", check for an adjective before it
             if (statement[0] == STATEMENT_ENDS[1]) {
@@ -147,13 +181,16 @@ public class Dictionary {
      * @return An instance of class c as a Vocab object, or null on failure
      */
     public Vocab findFollowingPhrase(String hiraganaPhrase, Class<? extends Vocab> c) {
+        if (hiraganaPhrase.length() == 0) {
+            return null;
+        }
         ArrayList<ArrayList<Vocab>> classList = getClassList(c);
 
         // Iterate from longest to shortest, returning first found
         for (int i = classList.size() - 1; i >= 0; i--) {
             ArrayList<Vocab> subList = classList.get(i);
 
-            // Only check if words aren't longer than the phrase
+            // Only check if words are shorter than the phrase
             if (subList.get(0).hiragana.length() > hiraganaPhrase.length()) {
                 continue;
             }
@@ -224,7 +261,7 @@ public class Dictionary {
 
         if (endSet != null) {
             // Get infitive of adjective and corresponding object
-            String inf = removeEnd(hiraganaPhrase, endSet) + "い";
+            String inf = removeEnd(hiraganaPhrase, endSet[0]) + "い";
             Vocab word = findFollowingPhrase(inf, Adjective.class);
 
             if (word instanceof Adjective adj) { // effectively asserts non-null
@@ -239,7 +276,7 @@ public class Dictionary {
         if (endSet == null) {
             return null;
         }
-        String stem = removeEnd(hiraganaPhrase, endSet);
+        String stem = removeEnd(hiraganaPhrase, endSet[0]);
 
         boolean isProgressive = stem.endsWith("てい") || stem.endsWith("でい");
         // For non-progressives, check an extra word length for non-iru and eru exceptions
@@ -284,17 +321,18 @@ public class Dictionary {
     private static String[] getEnd(String hiragana, String[] ends) {
         for (int i = 0; i < ends.length; i++) {
             if (hiragana.endsWith(ends[i])) {
-                String[] endSet = new String[2];
-                endSet[0] = ends[i];
-                endSet[1] = ENG_ENDS[i];
+                String[] endSet = {
+                    ends[i],
+                    ENG_ENDS[i]
+                };
                 return endSet;
             }
         }
         return null;
     }
 
-    private static String removeEnd(String hiragana, String[] ends) {
-        return hiragana.substring(0, hiragana.length() - ends[0].length());
+    private static String removeEnd(String hiragana, String end) {
+        return hiragana.substring(0, hiragana.length() - end.length());
     }
 
     protected static final String[] ENG_ENDS = {
@@ -393,5 +431,13 @@ class Conjugation<T extends Vocab> {
             return "did not " + v.english;
         }
         return Dictionary.ENG_ENDS[(isPresent ? 1 : 3) - (isPositive ? 0 : 1)] + " " + word.english;
+    }
+
+    public String toHiragana() {
+        // Only used with verbs
+        if (word instanceof Verb v) {
+            return v.conjugate(isPositive, isPresent, isProgressive);
+        }
+        return null;
     }
 }
